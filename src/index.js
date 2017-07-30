@@ -24,13 +24,18 @@ const
 		'category',
 		'maxAsk',
 		'minAsk',
-		'query'
+		'query',
+		'searchType'
 	],
 	QUERY_PARAM_MAX = '&maxAsk=',
 	QUERY_PARAM_MIN = '&minAsk=',
 	QUERY_PARAM_QUERY = '&query=',
+	QUERY_PARAM_SEARCH_TYPE = '&srchType=',
 	RE_HTML = /\.htm(l)?/i,
-	RE_QUALIFIED_URL = /^\/\/[a-z0-9\-]*\.craigslist\.[a-z]*/i,
+	// ex: //vancouver.craigslist.ca/......
+	RE_QUALIFIED_URL_RELATIVE = /^\/\/[a-z0-9\-]*\.craigslist\.[a-z]*/i,
+	// ex: /van/cto/d/asdasd-asdasd/2345345.html
+	RE_QUALIFIED_URL_RELATIVE_2 = /^\//i,
 	RE_TAGS_MAP = /map/i;
 
 /**
@@ -118,19 +123,18 @@ function _getPostings (options, markup) {
 					.find('.result-title')
 					.attr('href');
 
-			// introducing fix for #6
-			if (!RE_QUALIFIED_URL.test(detailsUrl)) {
+			if (RE_QUALIFIED_URL_RELATIVE.test(detailsUrl)) {
+				detailsUrl = [
+					(secure ? 'https:' : 'http:'),
+					detailsUrl].join('');
+			}
+			else if (RE_QUALIFIED_URL_RELATIVE_2.test(detailsUrl)) {
 				detailsUrl = [
 					(secure ? 'https://' : 'http://'),
 					hostname,
 					detailsUrl].join('');
-				// debug('adjusted URL for posting to (%s)', detailsUrl);
-			} else {
-				detailsUrl = [
-					(secure ? 'https:' : 'http:'),
-					detailsUrl].join('');
-				// debug('adjusted URL for postings to (%s)', detailsUrl);
 			}
+			// else it is a fully quailified url
 
 			posting = {
 				category : details[DEFAULT_CATEGORY_DETAILS_INDEX],
@@ -294,6 +298,14 @@ function _getRequestOptions (options, query) {
 			requestOptions.path,
 			QUERY_PARAM_MAX,
 			options.maxAsk].join('');
+	}
+
+	// add search type (if specified)
+	if (!core.Validation.isEmpty(options.searchType)) {
+		requestOptions.path = [
+			requestOptions.path,
+			QUERY_PARAM_SEARCH_TYPE,
+			options.searchType].join('');
 	}
 
 	debug('setting request options: %o', requestOptions);
